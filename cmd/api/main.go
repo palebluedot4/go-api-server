@@ -12,19 +12,13 @@ import (
 
 	"go-api-server/internal/config"
 	"go-api-server/internal/pkg/logger"
-	"go-api-server/internal/pkg/utils/timeutil"
+	"go-api-server/internal/pkg/timeouts"
+	"go-api-server/internal/pkg/timeutil"
 
 	"github.com/gin-gonic/gin"
 )
 
 var log = logger.Instance()
-
-const (
-	defaultShutdownTimeout = 15 * time.Second
-	readTimeout            = 15 * time.Second
-	writeTimeout           = 15 * time.Second
-	idleTimeout            = 60 * time.Second
-)
 
 func main() {
 	rootCtx, rootCancel := context.WithCancel(context.Background())
@@ -59,9 +53,9 @@ func main() {
 	s := &http.Server{
 		Addr:         fmt.Sprintf(":%d", cfg.Server.Port),
 		Handler:      r,
-		ReadTimeout:  readTimeout,
-		WriteTimeout: writeTimeout,
-		IdleTimeout:  idleTimeout,
+		ReadTimeout:  timeouts.ServerRead(cfg),
+		WriteTimeout: timeouts.ServerWrite(cfg),
+		IdleTimeout:  timeouts.ServerIdle(cfg),
 	}
 
 	serverErrChan := make(chan error, 1)
@@ -86,10 +80,10 @@ func main() {
 
 	rootCancel()
 
-	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), defaultShutdownTimeout)
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), timeouts.ServerShutdown(cfg))
 	defer shutdownCancel()
 
-	log.Infof("Attempting graceful HTTP server shutdown (timeout: %s)", defaultShutdownTimeout)
+	log.Info("Attempting graceful HTTP server shutdown")
 	if err := s.Shutdown(shutdownCtx); err != nil {
 		log.WithError(err).Error("Graceful HTTP server shutdown failed or timed out")
 	} else {
