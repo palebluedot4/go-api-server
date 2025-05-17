@@ -5,6 +5,7 @@ go 1.24
 require (
 	github.com/fsnotify/fsnotify v1.9.0
 	github.com/gin-gonic/gin v1.10.0
+	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/viper v1.20.1
 )
 
