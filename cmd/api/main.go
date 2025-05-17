@@ -2,26 +2,26 @@ package main
 
 import (
 	"fmt"
-	"log/slog"
 	"net/http"
-	"os"
 
 	"go-api-server/internal/config"
+	"go-api-server/internal/pkg/logger"
 
 	"github.com/gin-gonic/gin"
 )
 
+var log = logger.Instance()
+
 func main() {
 	if err := config.Init(); err != nil {
-		slog.Error("Failed to initialize configuration", "error", err)
-		os.Exit(1)
+		log.WithError(err).Fatal("Failed to initialize configuration")
 	}
-
 	cfg := config.Instance()
-	if cfg == nil {
-		slog.Error("Failed to get configuration instance")
-		os.Exit(1)
-	}
+
+	logger.Configure(cfg.Server.Logger)
+	defer logger.Shutdown()
+
+	log.WithField("mode", cfg.Server.RunMode).Info("Gin run mode set")
 
 	gin.SetMode(cfg.Server.RunMode)
 	r := gin.Default()
@@ -32,9 +32,8 @@ func main() {
 	})
 
 	serverAddr := fmt.Sprintf(":%d", cfg.Server.Port)
-	slog.Info("Starting server", "address", serverAddr)
+	log.WithField("address", serverAddr).Info("Starting server")
 	if err := r.Run(serverAddr); err != nil {
-		slog.Error("Failed to start server", "error", err)
-		os.Exit(1)
+		log.WithError(err).Fatal("Failed to start server")
 	}
 }

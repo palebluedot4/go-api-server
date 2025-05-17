@@ -2,10 +2,12 @@ package config
 
 import (
 	"fmt"
-	"log/slog"
 	"sync"
 
+	"go-api-server/internal/pkg/logger"
+
 	"github.com/fsnotify/fsnotify"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 )
 
@@ -14,8 +16,9 @@ type Config struct {
 }
 
 type ServerConfig struct {
-	Port    int    `mapstructure:"port"`
-	RunMode string `mapstructure:"run_mode"`
+	Port    int           `mapstructure:"port"`
+	RunMode string        `mapstructure:"run_mode"`
+	Logger  logger.Config `mapstructure:"logger"`
 }
 
 var (
@@ -26,6 +29,8 @@ var (
 	mu       sync.RWMutex
 )
 
+var log = logger.Instance()
+
 func Init() error {
 	once.Do(func() {
 		v = viper.New()
@@ -35,39 +40,44 @@ func Init() error {
 		var cfg Config
 		if err := v.ReadInConfig(); err != nil {
 			if _, ok := err.(viper.ConfigFileNotFoundError); ok {
-				slog.Info("Configuration file not found, using default values")
+				log.Info("Configuration file not found, using default values")
 			} else {
 				initErr = fmt.Errorf("failed to read configuration file: %w", err)
+				log.WithField("error", err).Error("Failed to read configuration file")
 				return
 			}
 		}
 
 		if err := v.Unmarshal(&cfg); err != nil {
 			initErr = fmt.Errorf("failed to unmarshal initial configuration: %w", err)
+			log.WithField("error", err).Error("Failed to unmarshal initial configuration")
 			return
 		}
 		instance = &cfg
 
 		configFileUsed := v.ConfigFileUsed()
 		if configFileUsed != "" {
-			slog.Info("Configuration successfully loaded and initialized from file", "file", configFileUsed)
+			log.WithField("file", configFileUsed).Info("Configuration successfully loaded and initialized from file")
 		} else {
-			slog.Info("Configuration successfully initialized using default values")
+			log.Info("Configuration successfully initialized using default values")
 		}
 
 		v.WatchConfig()
 		v.OnConfigChange(func(e fsnotify.Event) {
-			slog.Info("Configuration file change detected, reloading...", "file", e.Name)
+			log.WithField("file", e.Name).Info("Configuration file change detected, reloading...")
 			var newCfg Config
 			if err := v.Unmarshal(&newCfg); err != nil {
-				slog.Error("Failed to reload and unmarshal configuration file, continuing with previous settings", "file", e.Name, "error", err)
+				log.WithFields(logrus.Fields{
+					"file":  e.Name,
+					"error": err,
+				}).Error("Failed to reload and unmarshal configuration file, continuing with previous settings")
 				return
 			}
 
 			mu.Lock()
 			instance = &newCfg
 			mu.Unlock()
-			slog.Info("Configuration successfully reloaded", "file", e.Name)
+			log.WithField("file", e.Name).Info("Configuration successfully reloaded")
 		})
 	})
 	return initErr
@@ -82,7 +92,7 @@ func Instance() *Config {
 	mu.RUnlock()
 
 	if err := Init(); err != nil {
-		slog.Error("Failed to get configuration instance due to an error during initialization", "error", err)
+		log.WithField("error", err).Error("Failed to get configuration instance due to an error during initialization")
 		return nil
 	}
 
@@ -94,6 +104,8 @@ func Instance() *Config {
 func setViperDefaults(v *viper.Viper) {
 	v.SetDefault("server.port", 8080)
 	v.SetDefault("server.run_mode", "debug")
+
+	v.SetDefault("server.logger.level", "info")
 }
 
 func initializeReaderConfig(v *viper.Viper) {
