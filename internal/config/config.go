@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"sync"
+	"time"
 
 	"go-api-server/internal/pkg/logger"
 
@@ -12,13 +13,23 @@ import (
 )
 
 type Config struct {
-	Server ServerConfig `mapstructure:"server"`
+	Server  ServerConfig  `mapstructure:"server"`
+	Storage StorageConfig `mapstructure:"storage"`
 }
 
 type ServerConfig struct {
-	Port    int           `mapstructure:"port"`
-	RunMode string        `mapstructure:"run_mode"`
-	Logger  logger.Config `mapstructure:"logger"`
+	Port            int           `mapstructure:"port"`
+	RunMode         string        `mapstructure:"run_mode"`
+	ShutdownTimeout time.Duration `mapstructure:"shutdown_timeout"`
+	ReadTimeout     time.Duration `mapstructure:"read_timeout"`
+	WriteTimeout    time.Duration `mapstructure:"write_timeout"`
+	IdleTimeout     time.Duration `mapstructure:"idle_timeout"`
+	Logger          logger.Config `mapstructure:"logger"`
+}
+
+type StorageConfig struct {
+	ConnectTimeout  time.Duration `mapstructure:"connect_timeout"`
+	ShutdownTimeout time.Duration `mapstructure:"shutdown_timeout"`
 }
 
 var (
@@ -104,8 +115,14 @@ func Instance() *Config {
 func setViperDefaults(v *viper.Viper) {
 	v.SetDefault("server.port", 8080)
 	v.SetDefault("server.run_mode", "debug")
-
+	v.SetDefault("server.shutdown_timeout", "30s")
+	v.SetDefault("server.read_timeout", "15s")
+	v.SetDefault("server.write_timeout", "15s")
+	v.SetDefault("server.idle_timeout", "60s")
 	v.SetDefault("server.logger.level", "info")
+
+	v.SetDefault("storage.connect_timeout", "5s")
+	v.SetDefault("storage.shutdown_timeout", "15s")
 }
 
 func initializeReaderConfig(v *viper.Viper) {
