@@ -1,2 +1,4 @@
+main
+go_api_server
 config.yaml
 .env

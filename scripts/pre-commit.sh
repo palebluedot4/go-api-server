@@ -21,7 +21,7 @@ else
 fi
 
 echo "Running go build..."
-go build -a -trimpath -buildvcs=false -ldflags="-s -w" -installsuffix cgo -o main cmd/api/main.go
+go build -a -trimpath -buildvcs=false -ldflags="-s -w" -installsuffix cgo -o bin/go_api_server cmd/api/main.go
 
 echo "Pre-commit checks passed"
 exit 0
