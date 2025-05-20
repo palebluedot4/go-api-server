@@ -28,8 +28,23 @@ type ServerConfig struct {
 }
 
 type StorageConfig struct {
-	ConnectTimeout  time.Duration `mapstructure:"connect_timeout"`
-	ShutdownTimeout time.Duration `mapstructure:"shutdown_timeout"`
+	ConnectTimeout  time.Duration    `mapstructure:"connect_timeout"`
+	ShutdownTimeout time.Duration    `mapstructure:"shutdown_timeout"`
+	PostgreSQL      PostgreSQLConfig `mapstructure:"postgresql"`
+}
+
+type PostgreSQLConfig struct {
+	Enabled         bool          `mapstructure:"enabled"`
+	Host            string        `mapstructure:"host"`
+	Port            int           `mapstructure:"port"`
+	User            string        `mapstructure:"user"`
+	Password        string        `mapstructure:"password"`
+	DBName          string        `mapstructure:"dbname"`
+	SSLMode         string        `mapstructure:"sslmode"`
+	MaxOpenConns    int           `mapstructure:"max_open_conns"`
+	MaxIdleConns    int           `mapstructure:"max_idle_conns"`
+	ConnMaxLifetime time.Duration `mapstructure:"conn_max_lifetime"`
+	ConnMaxIdleTime time.Duration `mapstructure:"conn_max_idle_time"`
 }
 
 var (
@@ -114,7 +129,7 @@ func Instance() *Config {
 
 func setViperDefaults(v *viper.Viper) {
 	v.SetDefault("server.port", 8080)
-	v.SetDefault("server.run_mode", "debug")
+	v.SetDefault("server.run_mode", "release")
 	v.SetDefault("server.shutdown_timeout", "30s")
 	v.SetDefault("server.read_timeout", "15s")
 	v.SetDefault("server.write_timeout", "15s")
@@ -123,6 +138,22 @@ func setViperDefaults(v *viper.Viper) {
 
 	v.SetDefault("storage.connect_timeout", "5s")
 	v.SetDefault("storage.shutdown_timeout", "15s")
+	v.SetDefault("storage.postgresql.enabled", true)
+	// TODO: Use environment variables for sensitive data
+	v.SetDefault("storage.postgresql.host", "localhost")
+	// TODO: Use environment variables for sensitive data
+	v.SetDefault("storage.postgresql.port", 5432)
+	// TODO: Use environment variables for sensitive data
+	v.SetDefault("storage.postgresql.user", "postgres")
+	// TODO: Use environment variables for sensitive data
+	v.SetDefault("storage.postgresql.password", "")
+	// TODO: Use environment variables for sensitive data
+	v.SetDefault("storage.postgresql.dbname", "default_db")
+	v.SetDefault("storage.postgresql.sslmode", "disable")
+	v.SetDefault("storage.postgresql.max_open_conns", 100)
+	v.SetDefault("storage.postgresql.max_idle_conns", 10)
+	v.SetDefault("storage.postgresql.conn_max_lifetime", "30m")
+	v.SetDefault("storage.postgresql.conn_max_idle_time", "10m")
 }
 
 func initializeReaderConfig(v *viper.Viper) {
