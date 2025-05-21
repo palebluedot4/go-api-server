@@ -13,7 +13,7 @@ import (
 
 var log = logger.Instance()
 
-func NewPostgreSQLPool(cfg *config.Config) (*pgxpool.Pool, error) {
+func NewPostgreSQLPool(ctx context.Context, cfg *config.Config) (*pgxpool.Pool, error) {
 	if !cfg.Storage.PostgreSQL.Enabled {
 		log.Info("PostgreSQL is disabled in configuration")
 		return nil, nil
@@ -47,15 +47,15 @@ func NewPostgreSQLPool(cfg *config.Config) (*pgxpool.Pool, error) {
 	}
 
 	connectTimeout := timeouts.StorageConnect(cfg)
-	ctx, cancel := context.WithTimeout(context.Background(), connectTimeout)
-	defer cancel()
+	poolCtx, poolCancel := context.WithTimeout(ctx, connectTimeout)
+	defer poolCancel()
 
-	pool, err := pgxpool.NewWithConfig(ctx, poolConfig)
+	pool, err := pgxpool.NewWithConfig(poolCtx, poolConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create PostgreSQL connection pool: %w", err)
 	}
 
-	pingCtx, pingCancel := context.WithTimeout(context.Background(), connectTimeout)
+	pingCtx, pingCancel := context.WithTimeout(ctx, connectTimeout)
 	defer pingCancel()
 	if err = pool.Ping(pingCtx); err != nil {
 		log.WithField("error", err).WithField("host", cfg.Storage.PostgreSQL.Host).WithField("database", cfg.Storage.PostgreSQL.DBName).Error("Failed to ping PostgreSQL database")
