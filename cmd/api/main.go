@@ -8,12 +8,12 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
+	"go-api-server/internal/adapter/router"
+	"go-api-server/internal/app"
 	"go-api-server/internal/config"
 	"go-api-server/internal/pkg/logger"
 	"go-api-server/internal/pkg/timeouts"
-	"go-api-server/internal/pkg/timeutil"
 
 	"github.com/gin-gonic/gin"
 )
@@ -28,31 +28,34 @@ func main() {
 
 	if err := config.Init(); err != nil {
 		log.WithError(err).Fatal("Configuration initialization failed")
-
 	}
 	cfg := config.Instance()
 
 	logger.Configure(cfg.Server.Logger)
 
-	log.WithFields(map[string]any{
-		"port":      cfg.Server.Port,
-		"run_mode":  cfg.Server.RunMode,
-		"log_level": cfg.Server.Logger.Level,
-	}).Info("Application starting with loaded configuration")
+	log.Info("Application bootstrap starting...")
+
+	coreServices, coreCleanup, err := app.NewCoreServices(rootCtx, cfg)
+	if err != nil {
+		log.WithError(err).Error("Failed to initialize core services")
+		rootCancel()
+		if coreCleanup != nil {
+			coreCleanup()
+		}
+		log.Info("Application shutting down due to core services initialization failure")
+		os.Exit(1)
+	}
+	if coreCleanup != nil {
+		defer coreCleanup()
+	}
 
 	gin.SetMode(cfg.Server.RunMode)
-	r := gin.Default()
+	engine := gin.Default()
+	router.SetupRoutes(engine, coreServices)
 
-	r.GET("/health", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{
-			"status":    "ok",
-			"timestamp": timeutil.Now().Format(time.RFC3339Nano),
-		})
-	})
-
-	s := &http.Server{
+	srv := &http.Server{
 		Addr:         fmt.Sprintf(":%d", cfg.Server.Port),
-		Handler:      r,
+		Handler:      engine,
 		ReadTimeout:  timeouts.ServerRead(cfg),
 		WriteTimeout: timeouts.ServerWrite(cfg),
 		IdleTimeout:  timeouts.ServerIdle(cfg),
@@ -60,8 +63,9 @@ func main() {
 
 	serverErrChan := make(chan error, 1)
 	go func() {
-		err := s.ListenAndServe()
-		if err != nil && !errors.Is(err, http.ErrServerClosed) {
+		log.Infof("HTTP server starting, listening on port %d", cfg.Server.Port)
+		err := srv.ListenAndServe()
+		if !errors.Is(err, http.ErrServerClosed) {
 			serverErrChan <- fmt.Errorf("HTTP server ListenAndServe failed: %w", err)
 		}
 	}()
@@ -78,13 +82,13 @@ func main() {
 		log.Info("Root context cancelled, initiating graceful shutdown")
 	}
 
+	signal.Stop(quitSignalChan)
 	rootCancel()
 
 	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), timeouts.ServerShutdown(cfg))
 	defer shutdownCancel()
 
-	log.Info("Attempting graceful HTTP server shutdown")
-	if err := s.Shutdown(shutdownCtx); err != nil {
+	if err := srv.Shutdown(shutdownCtx); err != nil {
 		log.WithError(err).Error("Graceful HTTP server shutdown failed or timed out")
 	} else {
 		log.Info("HTTP server gracefully stopped")
