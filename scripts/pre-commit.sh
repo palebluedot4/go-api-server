@@ -15,6 +15,12 @@ if ! go mod tidy; then
     exit 1
 fi
 
+echo "[INFO] Generating Swagger documentation..."
+if ! swag init -g cmd/api/main.go; then
+    echo "[ERROR] Swagger documentation generation failed. Check output." >&2
+    exit 1
+fi
+
 if command -v golangci-lint &>/dev/null; then
     echo "[INFO] Running linter..."
     if ! golangci-lint run --fast ./...; then
