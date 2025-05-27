@@ -60,7 +60,7 @@ func NewPostgreSQLPool(ctx context.Context, cfg *config.Config) (*pgxpool.Pool, 
 	if err = pool.Ping(pingCtx); err != nil {
 		log.WithField("error", err).WithField("host", cfg.Storage.PostgreSQL.Host).WithField("database", cfg.Storage.PostgreSQL.DBName).Error("Failed to ping PostgreSQL database")
 		pool.Close()
-		return nil, fmt.Errorf("failed to ping PostgreSQL database within %v: %w", connectTimeout, err)
+		return nil, fmt.Errorf("failed to ping PostgreSQL database: %w", err)
 	}
 
 	log.Infof("Successfully connected to PostgreSQL database: %s on host: %s", cfg.Storage.PostgreSQL.DBName, cfg.Storage.PostgreSQL.Host)

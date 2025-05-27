@@ -159,6 +159,6 @@ func setViperDefaults(v *viper.Viper) {
 func initializeReaderConfig(v *viper.Viper) {
 	v.SetConfigName("config")
 	v.SetConfigType("yaml")
-	v.AddConfigPath("internal/config")
 	v.AddConfigPath(".")
+	v.AddConfigPath("internal/config")
 }
