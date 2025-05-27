@@ -2,3 +2,5 @@ main
 go_api_server
 config.yaml
 .env
+logs/*
+!logs/.gitkeep
