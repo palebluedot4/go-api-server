@@ -1,27 +1,52 @@
-#!/bin/sh
+#!/usr/bin/env bash
+set -euo pipefail
 
-set -e
+echo "[INFO] Pre-commit checks starting..."
 
-echo "Running pre-commit hook..."
-
-echo "Formatting Go files..."
-go fmt ./...
-
-echo "Tidying go modules..."
-go mod tidy
-
-if
-    command -v golangci-lint &
-    >/dev/null
-then
-    echo "Running linter (golangci-lint)..."
-    golangci-lint run --fast ./...
-else
-    echo "Linter (golangci-lint) not found, skipping lint check"
+echo "[INFO] Formatting Go files..."
+if ! go fmt ./...; then
+    echo "[ERROR] 'go fmt' failed. Check output." >&2
+    exit 1
 fi
 
-echo "Running go build..."
-go build -a -trimpath -buildvcs=false -ldflags="-s -w" -installsuffix cgo -o bin/go_api_server cmd/api/main.go
+echo "[INFO] Tidying Go modules..."
+if ! go mod tidy; then
+    echo "[ERROR] 'go mod tidy' failed. Check output." >&2
+    exit 1
+fi
 
-echo "Pre-commit checks passed"
+if command -v golangci-lint &>/dev/null; then
+    echo "[INFO] Running linter..."
+    if ! golangci-lint run --fast ./...; then
+        echo "[ERROR] Linter found issues. Check output." >&2
+        exit 1
+    fi
+else
+    echo "[WARN] Linter (golangci-lint) not found, skipping."
+fi
+
+readonly MAIN_GO_FILE="cmd/api/main.go"
+readonly OUTPUT_DIR="bin"
+readonly OUTPUT_BINARY="${OUTPUT_DIR}/go_api_server"
+
+echo "[INFO] Building Go binary (check)..."
+
+if ! mkdir -p "${OUTPUT_DIR}"; then
+    echo "[ERROR] Failed to create output dir: ${OUTPUT_DIR}" >&2
+    exit 1
+fi
+
+if ! go build \
+    -a \
+    -trimpath \
+    -buildvcs=false \
+    -ldflags="-s -w" \
+    -installsuffix cgo \
+    -o "${OUTPUT_BINARY}" \
+    "${MAIN_GO_FILE}"; then
+    echo "[ERROR] Build failed for '${MAIN_GO_FILE}'. Check output." >&2
+    exit 1
+fi
+
+echo "[INFO] Pre-commit checks passed."
 exit 0
