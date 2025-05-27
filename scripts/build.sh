@@ -10,6 +10,12 @@ readonly OUTPUT_DIR="$(dirname "${OUTPUT_BINARY}")"
 
 cd "${PROJECT_ROOT_DIR}"
 
+echo "[INFO] Generating Swagger documentation..."
+if ! swag init -g "${MAIN_GO_FILE}"; then
+    echo "[ERROR] Swagger documentation generation failed. Check output." >&2
+    exit 1
+fi
+
 echo "[INFO] Starting Go build process..."
 
 echo "[INFO] Ensuring output directory: ${OUTPUT_DIR}"
