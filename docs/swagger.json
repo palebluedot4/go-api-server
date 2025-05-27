@@ -1,0 +1,73 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "description": "This is a Go API server.",
+        "title": "Go API ʕ ´•ᴥ•`ʔﾉﾞ",
+        "contact": {},
+        "version": "1.0"
+    },
+    "paths": {
+        "/health": {
+            "get": {
+                "description": "Checks the health of the application.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "health"
+                ],
+                "summary": "Health check",
+                "responses": {
+                    "200": {
+                        "description": "Successfully returned health status",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/configurations/app-version": {
+            "get": {
+                "description": "Retrieves the application version.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "configurations"
+                ],
+                "summary": "Get application version",
+                "responses": {
+                    "200": {
+                        "description": "Successfully retrieved application version",
+                        "schema": {
+                            "$ref": "#/definitions/response.GetApplicationVersionResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "response.GetApplicationVersionResponse": {
+            "type": "object",
+            "properties": {
+                "version": {
+                    "type": "string"
+                }
+            }
+        }
+    }
+}

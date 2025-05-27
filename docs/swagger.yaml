@@ -1,0 +1,47 @@
+definitions:
+  response.GetApplicationVersionResponse:
+    properties:
+      version:
+        type: string
+    type: object
+info:
+  contact: {}
+  description: This is a Go API server.
+  title: Go API ʕ ´•ᴥ•`ʔﾉﾞ
+  version: "1.0"
+paths:
+  /health:
+    get:
+      description: Checks the health of the application.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully returned health status
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Health check
+      tags:
+      - health
+  /v1/configurations/app-version:
+    get:
+      description: Retrieves the application version.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully retrieved application version
+          schema:
+            $ref: '#/definitions/response.GetApplicationVersionResponse'
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get application version
+      tags:
+      - configurations
+swagger: "2.0"

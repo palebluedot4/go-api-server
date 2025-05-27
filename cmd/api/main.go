@@ -1,3 +1,6 @@
+// @title Go API ʕ ´•ᴥ•`ʔﾉﾞ
+// @version 1.0
+// @description This is a Go API server.
 package main
 
 import (
@@ -9,6 +12,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	_ "go-api-server/docs"
 	"go-api-server/internal/adapter/router"
 	"go-api-server/internal/app"
 	"go-api-server/internal/config"

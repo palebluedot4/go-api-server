@@ -19,7 +19,7 @@ func NewConfigurationHandler(configurationService service.ConfigurationService) 
 	}
 }
 
-// GetApplicationVersion handles the HTTP GET request to retrieve the application version.
+// GetApplicationVersion godoc
 // @Summary Get application version
 // @Description Retrieves the application version.
 // @Tags configurations
