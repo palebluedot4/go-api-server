@@ -1,5 +1,5 @@
-ARG GO_VERSION=1.24.0
 ARG TARGET_PLATFORM="linux/amd64"
+ARG GO_VERSION=1.24.0
 
 FROM --platform=${TARGET_PLATFORM} golang:${GO_VERSION}-alpine AS builder
 
