@@ -3,6 +3,11 @@ set -euo pipefail
 
 echo "[INFO] Pre-commit checks starting..."
 
+if git diff --cached --name-only | grep -q "^\.env$"; then
+    echo "[ERROR] '.env' file detected in staged changes. Please remove it from staging." >&2
+    exit 1
+fi
+
 echo "[INFO] Formatting Go files..."
 if ! go fmt ./...; then
     echo "[ERROR] 'go fmt' failed. Check output." >&2
