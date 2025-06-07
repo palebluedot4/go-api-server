@@ -62,7 +62,8 @@ var log = logger.Instance()
 func Init() error {
 	once.Do(func() {
 		if err := godotenv.Load(); err != nil {
-			log.WithError(err).Warn("Error loading .env file. Relying on system environment variables, config file, or defaults")
+			initErr = fmt.Errorf("failed to load .env file: %w", err)
+			return
 		}
 
 		v = viper.New()
@@ -76,15 +77,13 @@ func Init() error {
 			if _, ok := err.(viper.ConfigFileNotFoundError); ok {
 				log.Info("Configuration file not found, using default values")
 			} else {
-				e := fmt.Errorf("failed to read configuration file: %w", err)
-				log.WithField("error", e).Error("Failed to read configuration file")
+				initErr = fmt.Errorf("failed to read configuration file: %w", err)
 				return
 			}
 		}
 
 		if err := v.Unmarshal(&cfg); err != nil {
-			e := fmt.Errorf("failed to unmarshal initial configuration: %w", err)
-			log.WithField("error", e).Error("Failed to unmarshal initial configuration")
+			initErr = fmt.Errorf("failed to unmarshal initial configuration: %w", err)
 			return
 		}
 
