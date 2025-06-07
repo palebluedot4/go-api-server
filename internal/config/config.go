@@ -2,12 +2,14 @@ package config
 
 import (
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
 	"go-api-server/internal/pkg/logger"
 
 	"github.com/fsnotify/fsnotify"
+	"github.com/joho/godotenv"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 )
@@ -59,7 +61,13 @@ var log = logger.Instance()
 
 func Init() error {
 	once.Do(func() {
+		if err := godotenv.Load(); err != nil {
+			log.WithError(err).Warn("Error loading .env file. Relying on system environment variables, config file, or defaults")
+		}
+
 		v = viper.New()
+		v.AutomaticEnv()
+		v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 		setViperDefaults(v)
 		initializeReaderConfig(v)
 
@@ -68,24 +76,27 @@ func Init() error {
 			if _, ok := err.(viper.ConfigFileNotFoundError); ok {
 				log.Info("Configuration file not found, using default values")
 			} else {
-				initErr = fmt.Errorf("failed to read configuration file: %w", err)
-				log.WithField("error", err).Error("Failed to read configuration file")
+				e := fmt.Errorf("failed to read configuration file: %w", err)
+				log.WithField("error", e).Error("Failed to read configuration file")
 				return
 			}
 		}
 
 		if err := v.Unmarshal(&cfg); err != nil {
-			initErr = fmt.Errorf("failed to unmarshal initial configuration: %w", err)
-			log.WithField("error", err).Error("Failed to unmarshal initial configuration")
+			e := fmt.Errorf("failed to unmarshal initial configuration: %w", err)
+			log.WithField("error", e).Error("Failed to unmarshal initial configuration")
 			return
 		}
+
+		mu.Lock()
 		instance = &cfg
+		mu.Unlock()
 
 		configFileUsed := v.ConfigFileUsed()
 		if configFileUsed != "" {
 			log.WithField("file", configFileUsed).Info("Configuration successfully loaded and initialized from file")
 		} else {
-			log.Info("Configuration successfully initialized using default values")
+			log.Info("Configuration successfully initialized using default values and environment variables")
 		}
 
 		v.WatchConfig()
@@ -128,6 +139,7 @@ func Instance() *Config {
 }
 
 func setViperDefaults(v *viper.Viper) {
+	// Server defaults
 	v.SetDefault("server.port", 8080)
 	v.SetDefault("server.run_mode", "release")
 	v.SetDefault("server.shutdown_timeout", "30s")
@@ -136,18 +148,11 @@ func setViperDefaults(v *viper.Viper) {
 	v.SetDefault("server.idle_timeout", "60s")
 	v.SetDefault("server.logger.level", "info")
 
-	v.SetDefault("storage.connect_timeout", "5s")
-	v.SetDefault("storage.shutdown_timeout", "15s")
-	v.SetDefault("storage.postgresql.enabled", true)
-	// TODO: Use environment variables for sensitive data
+	// Storage defaults
 	v.SetDefault("storage.postgresql.host", "localhost")
-	// TODO: Use environment variables for sensitive data
 	v.SetDefault("storage.postgresql.port", 5432)
-	// TODO: Use environment variables for sensitive data
 	v.SetDefault("storage.postgresql.user", "postgres")
-	// TODO: Use environment variables for sensitive data
 	v.SetDefault("storage.postgresql.password", "")
-	// TODO: Use environment variables for sensitive data
 	v.SetDefault("storage.postgresql.dbname", "default_db")
 	v.SetDefault("storage.postgresql.sslmode", "disable")
 	v.SetDefault("storage.postgresql.max_open_conns", 100)
